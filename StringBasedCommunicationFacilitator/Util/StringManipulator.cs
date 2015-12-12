@@ -25,7 +25,7 @@ namespace StringBasedCommunicationFacilitator.Util
                 throw new FacilitatorException(556);
 
             int remainder = str.Length % chunkLength;
-            int totallen = str.Length & (remainder > 0 ? (chunkLength - remainder) : 0);
+            int totallen = str.Length + (remainder > 0 ? (chunkLength - remainder) : 0);
             str = str.PadRight(totallen, ' ');
 
             for (int i = 0; i < str.Length; i += chunkLength)

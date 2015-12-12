@@ -12,7 +12,7 @@
       <field name="TotalNumOfOrders" csharpType="int?" format="000000000" />
     </responseHeaderParams>
     <responseBodyParams>
-      <field name="Orders" csharpType="Order" length="1" />
+      <field name="Order" csharpType="Order" length="1" />
     </responseBodyParams>
   </messageTemplate>
 </messageTemplates>

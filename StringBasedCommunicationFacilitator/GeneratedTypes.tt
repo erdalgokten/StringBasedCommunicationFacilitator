@@ -1,4 +1,4 @@
-﻿<#@ template debug="false" hostspecific="true" language="C#" #>
+﻿<#@ template debug="true" hostspecific="true" language="C#" #>
 <#@ output extension=".cs" #>
 <#@ assembly name="System" #>
 <#@ assembly name="System.Core" #>
@@ -501,6 +501,7 @@ foreach (ResponseBodyParam param in template.ResponseBodyParams) {
 
 			var requestString = requestBag.ToString();
 			var responseString = StringBasedCommunicator.SendAndReceive(requestString);
+			responseString = responseString.TrimEnd(' ');
 
 			var responseBag = new ResponseBag<#= template.ActionName #>(responseString, requestString);
 			responseBag.RequestText = requestBag.ToString();
@@ -511,7 +512,6 @@ foreach (ResponseBodyParam param in template.ResponseBodyParams) {
 	#endregion
 
 <# } #>
-	#region Errors (if any)
 <# foreach (var template in customTypes) { #>
 <# foreach (CustomTypeField param in template.CustomTypeFields) { #>
 <# if (param.Errors.Length > 0) { #> <# Error("CustomType Name: " + template.Name + " Errors: " + param.Errors.ToString()); #> <# } #>
@@ -532,5 +532,4 @@ foreach (ResponseBodyParam param in template.ResponseBodyParams) {
 <# if (param.Errors.Length > 0) { #> <# Error("Template Name: " + template.ActionName + " Errors: " + param.Errors.ToString()); #> <# } #>
 <# } #>
 <# } #>
-	#endregion
 }

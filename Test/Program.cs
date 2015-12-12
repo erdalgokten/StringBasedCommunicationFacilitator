@@ -23,15 +23,15 @@ namespace Test
             Console.WriteLine("Customer Id: " + customerId);
             Console.WriteLine("Total number of orders: " + responseBag.RSHeader.TotalNumOfOrders);
             Console.WriteLine();
-            for (int i = 0; i < responseBag.RSHeader.TotalNumOfOrders; i++)
+            int i = 0;
+            foreach (var responseBodyItem in responseBag.RSBody)
             {
-                ResponseBodyGetCustomerOrders customerOrder = responseBag.RSBody[i];
-                Console.WriteLine("Order Number: " + i);
-                Console.WriteLine("Name: " + customerOrder._Orders.Name);
-                Console.WriteLine("Desc: " + customerOrder._Orders.Desc);
-                Console.WriteLine("Quantity: " + customerOrder._Orders.Quantity);
-                Console.WriteLine("Price: " + customerOrder._Orders.Price);
-                Console.WriteLine("Amount: " + customerOrder._Orders.Amount);
+                Console.WriteLine("Order Number: " + i++);
+                Console.WriteLine("Name: " + responseBodyItem._Order.Name);
+                Console.WriteLine("Desc: " + responseBodyItem._Order.Desc);
+                Console.WriteLine("Quantity: " + responseBodyItem._Order.Quantity);
+                Console.WriteLine("Price: " + responseBodyItem._Order.Price);
+                Console.WriteLine("Amount: " + responseBodyItem._Order.Amount);
                 Console.WriteLine();
             }
             

@@ -59,13 +59,15 @@
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="GeneratedTypes.tt">
+    <Content Include="GeneratedTypes.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>GeneratedTypes.cs</LastGenOutput>
-    </None>
+    </Content>
     <Content Include="StringBasedCommunicationFacilitator.svc" />
     <None Include="TemplateCustomTypes\Order.xml" />
-    <None Include="TemplateActions\GetCustomerOrders.xml" />
+    <None Include="TemplateActions\GetCustomerOrders.xml">
+      <SubType>Designer</SubType>
+    </None>
     <Content Include="Web.config" />
   </ItemGroup>
   <ItemGroup>
@@ -123,7 +125,7 @@
         <WebProjectProperties>
           <UseIIS>True</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
-          <DevelopmentServerPort>0</DevelopmentServerPort>
+          <DevelopmentServerPort>11169</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
           <IISUrl>http://localhost:45296/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>

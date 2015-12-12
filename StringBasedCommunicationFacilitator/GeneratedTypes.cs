@@ -80,7 +80,7 @@ namespace StringBasedCommunicationFacilitator
 	{
 		[OperationContract]
 		[WebInvoke(UriTemplate = "GetCustomerOrders", BodyStyle = WebMessageBodyStyle.Bare)]
-		[Description("Gets customer orders from the backing system which lets string based communication")]
+		[Description("Gets customer orders from the backing system which only lets string based communication")]
 		ResponseBagGetCustomerOrders GetCustomerOrders(RequestBagGetCustomerOrders requestBag);
 	}
 	#endregion
@@ -101,7 +101,7 @@ namespace StringBasedCommunicationFacilitator
 
 		public string ActionDesc
 		{
-			get { return "Gets customer orders from the backing system which lets string based communication"; }
+			get { return "Gets customer orders from the backing system which only lets string based communication"; }
 		}
 
 		[OnDeserialized]
@@ -255,11 +255,11 @@ namespace StringBasedCommunicationFacilitator
 		public const int BODY_LENGTH = 50;
 
 		[DataMember]
-		public Order _Orders { get; set; }
+		public Order _Order { get; set; }
 
 		public ResponseBodyGetCustomerOrders(string str)
 		{
-			this._Orders = str.Substring(0, 50).ToCustomType<Order>(1, Alignment.LEFT, ' ', "", false);
+			this._Order = str.Substring(0, 50).ToCustomType<Order>(1, Alignment.LEFT, ' ', "", false);
 		}
 	}
 	public partial class StringBasedCommunicationFacilitatorService : IStringBasedCommunicationFacilitatorService
@@ -317,6 +317,7 @@ namespace StringBasedCommunicationFacilitator
 
 			var requestString = requestBag.ToString();
 			var responseString = StringBasedCommunicator.SendAndReceive(requestString);
+			responseString = responseString.TrimEnd(' ');
 
 			var responseBag = new ResponseBagGetCustomerOrders(responseString, requestString);
 			responseBag.RequestText = requestBag.ToString();
@@ -326,6 +327,4 @@ namespace StringBasedCommunicationFacilitator
 	}
 	#endregion
 
-	#region Errors (if any)
-	#endregion
 }

@@ -45,7 +45,7 @@
   <xs:element name="ArrayOfResponseBodyGetCustomerOrders" nillable="true" type="tns:ArrayOfResponseBodyGetCustomerOrders" />
   <xs:complexType name="ResponseBodyGetCustomerOrders">
     <xs:sequence>
-      <xs:element minOccurs="0" name="_Orders" nillable="true" type="tns:Order" />
+      <xs:element minOccurs="0" name="_Order" nillable="true" type="tns:Order" />
     </xs:sequence>
   </xs:complexType>
   <xs:element name="ResponseBodyGetCustomerOrders" nillable="true" type="tns:ResponseBodyGetCustomerOrders" />

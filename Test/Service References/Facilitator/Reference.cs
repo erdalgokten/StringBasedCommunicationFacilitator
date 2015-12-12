@@ -360,7 +360,7 @@ namespace Test.Facilitator {
         private System.Runtime.Serialization.ExtensionDataObject extensionDataField;
         
         [System.Runtime.Serialization.OptionalFieldAttribute()]
-        private Test.Facilitator.Order _OrdersField;
+        private Test.Facilitator.Order _OrderField;
         
         [global::System.ComponentModel.BrowsableAttribute(false)]
         public System.Runtime.Serialization.ExtensionDataObject ExtensionData {
@@ -373,14 +373,14 @@ namespace Test.Facilitator {
         }
         
         [System.Runtime.Serialization.DataMemberAttribute()]
-        public Test.Facilitator.Order _Orders {
+        public Test.Facilitator.Order _Order {
             get {
-                return this._OrdersField;
+                return this._OrderField;
             }
             set {
-                if ((object.ReferenceEquals(this._OrdersField, value) != true)) {
-                    this._OrdersField = value;
-                    this.RaisePropertyChanged("_Orders");
+                if ((object.ReferenceEquals(this._OrderField, value) != true)) {
+                    this._OrderField = value;
+                    this.RaisePropertyChanged("_Order");
                 }
             }
         }
