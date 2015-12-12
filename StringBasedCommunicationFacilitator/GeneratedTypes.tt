@@ -1,0 +1,536 @@
+﻿<#@ template debug="false" hostspecific="true" language="C#" #>
+<#@ output extension=".cs" #>
+<#@ assembly name="System" #>
+<#@ assembly name="System.Core" #>
+<#@ assembly name="System.Runtime.Serialization" #>
+<#@ assembly name="System.Data" #>
+<#@ assembly name="EnvDTE" #>
+<#@ assembly name="$(TargetPath)" #>
+<#@ import namespace="StringBasedCommunicationFacilitator" #>
+<#@ import namespace="System" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Runtime.Serialization" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Configuration" #>
+<#@ import namespace="StringBasedCommunicationFacilitator.Util" #>
+using System;
+using System.Text;
+using System.Linq;
+using System.Runtime.Serialization;
+using System.Collections.Generic;
+using System.Configuration;
+using System.ServiceModel;
+using System.Diagnostics;
+using System.ServiceModel.Web;
+using System.EnterpriseServices;
+using StringBasedCommunicationFacilitator.Util;
+using StringBasedCommunicationFacilitator.Interfaces;
+<#	
+	IServiceProvider serviceProvider = (IServiceProvider)this.Host;
+	EnvDTE.DTE dte = (EnvDTE.DTE) serviceProvider.GetService(typeof(EnvDTE.DTE));
+	Array activeSolutionProjects = (Array)dte.ActiveSolutionProjects;
+	EnvDTE.Project currentProject = (EnvDTE.Project)activeSolutionProjects.GetValue(0);
+	var fileInfo = new System.IO.FileInfo(currentProject.FullName);
+	var projPath = fileInfo.Directory.FullName;
+
+	MetadataFromXml.PROJ_PATH = projPath;
+	MetadataFromXml metaFromXml = new MetadataFromXml();
+	metaFromXml.LoadActions();
+	metaFromXml.LoadCustomTypes();
+	var templatesUnordered = metaFromXml.MessageTemplates;
+	var customTypesUnordered = metaFromXml.CustomTypes;
+
+	var templates = templatesUnordered.OrderBy(t => t.ActionName);
+	var customTypes = customTypesUnordered.OrderBy(c => c.Name); 
+#>
+
+namespace StringBasedCommunicationFacilitator
+{
+	#region CustomTypes
+<# foreach(CustomType cusType in customTypes) { #>
+	[DataContract]
+	public class <#= cusType.Name #> : ICustomType
+	{
+		public const int TYPE_LENGTH = <#= cusType.Length #>;
+
+<# foreach(CustomTypeField param in cusType.CustomTypeFields) { #>
+		[DataMember]
+		public <#= param.CSharpType #><# if (param.IsCustomType && param.Length > 1) { #>[]<# } #> <# if (param.IsCustomType) { #>_<# } #><#= param.Name #> { get; set; }
+<# } #>
+
+		public <#= cusType.Name #>()
+		{
+			// do nothing, just to support new()
+		}
+
+		public <#= cusType.Name #>(string str)
+		{
+			this.FromCustomString(str);
+		}
+
+		public override string ToString()
+		{
+			return this.ToCustomString();
+		}
+
+		public int Length
+		{
+			get { return TYPE_LENGTH; }
+		}
+
+		public string ToCustomString()
+		{
+			StringBuilder sb = new StringBuilder();
+
+<# foreach(CustomTypeField param in cusType.CustomTypeFields) { #>
+<# if (param.IsSerializable) { #>
+			sb.Append(this.<# if (param.IsCustomType) { #>_<# } #><#= param.Name #>.ToCustomString(<#= param.Length #>, Alignment.<#= param.Alignment #>, '<#= param.PaddingChar #>', "<#= param.Format #>", <# if (param.IgnoreDecimalPoint) { #>true<# } else { #>false<# } #>));
+<# } #>
+<# } #>
+
+			return sb.ToString();
+		}
+
+		public void FromCustomString(string str)
+		{
+<#
+int it = 0;
+foreach(CustomTypeField param in cusType.CustomTypeFields) {
+	if (param.IsSerializable) {
+		string method = "ToCSharpType";
+		int len = param.Length;
+		if (param.IsCustomType)
+		{
+			len = customTypes.First(c => c.Name == param.CSharpType).Length * param.Length;
+			method = param.Length > 1 ? "ToCustomTypeArray" : "ToCustomType";
+		}
+#>
+			this.<# if (param.IsCustomType) { #>_<# } #><#= param.Name #> = str.Substring(<#= it #>, <#= len #>).<#= method #><<#= param.CSharpType #>>(<#= param.Length #>, Alignment.<#= param.Alignment #>, '<#= param.PaddingChar #>', "<#= param.Format #>", <# if (param.IgnoreDecimalPoint) { #>true<# } else { #>false<# } #>);
+<#
+		it = it + len;
+	}
+}
+#>		}
+	}
+<# } #>
+	#endregion
+
+	#region WCF Service Interface
+	[ServiceContract]
+	public interface IStringBasedCommunicationFacilitatorService
+	{
+<# foreach (var template in templates) { #>
+		[OperationContract]
+		[WebInvoke(UriTemplate = "<#= template.ActionName #>", BodyStyle = WebMessageBodyStyle.Bare)]
+		[Description("<#= template.ActionDesc #>")]
+		ResponseBag<#= template.ActionName #> <#= template.ActionName #>(RequestBag<#= template.ActionName #> requestBag);
+<# } #>
+	}
+	#endregion
+
+<# foreach (var template in templates) { #>
+	#region <#= template.ActionName #> Types
+	[DataContract]
+	public class RequestBag<#= template.ActionName #> : IRequestBag
+	{
+		[DataMember]
+		public RequestHeader<#= template.ActionName #> RQHeader { get; set; }
+		[DataMember]
+		public List<RequestBody<#= template.ActionName #>> RQBody { get; set; }
+
+		public string ActionName
+		{
+			get { return "<#= template.ActionName #>"; }
+		}
+
+		public string ActionDesc
+		{
+			get { return "<#= template.ActionDesc #>"; }
+		}
+
+		[OnDeserialized]
+		void OnDeserialized(StreamingContext ctxt)
+		{
+			// not implemented
+		}
+
+		public override string ToString()
+		{
+			StringBuilder sb = new StringBuilder();
+
+			if (this.RQHeader != null)
+			{
+				sb.Append(this.RQHeader.ToString());
+			}
+
+			if (this.RQBody != null)
+			{
+				foreach (var bodyItem in this.RQBody)
+				{
+					sb.Append(bodyItem.ToString());
+				}
+			}
+
+			return sb.ToString();
+		}
+	}
+	[DataContract]
+	public class RequestHeader<#= template.ActionName #>
+	{
+<#  int totalLen = 0;
+	foreach (RequestHeaderParam param in template.RequestHeaderParams)
+	{
+		if (param.IsSerializable)
+		{
+			int len = param.Length;
+			if (param.IsCustomType)
+			{
+				len = customTypes.First(c => c.Name == param.CSharpType).Length * param.Length;
+			}
+			totalLen += len;
+		}
+	} #>
+		public const int HEADER_LENGTH = <#= totalLen #>;
+
+<# foreach (RequestHeaderParam param in template.RequestHeaderParams) { #>
+		[DataMember]
+		public <#= param.CSharpType #><# if (param.IsCustomType && param.Length > 1) { #>[]<# } #> <# if (param.IsCustomType) { #>_<# } #><#= param.Name #> { get; set; }
+<# } #>
+
+		public RequestHeader<#= template.ActionName #>(string str)
+		{
+<#
+int it = 0;
+foreach (RequestHeaderParam param in template.RequestHeaderParams) {
+	if (param.IsSerializable) {
+		string method = "ToCSharpType";
+		int len = param.Length;
+		if (param.IsCustomType)
+		{
+			len = customTypes.First(c => c.Name == param.CSharpType).Length * param.Length;
+			method = param.Length > 1 ? "ToCustomTypeArray" : "ToCustomType";
+		}
+#>
+			this.<# if (param.IsCustomType) { #>_<# } #><#= param.Name #> = str.Substring(<#= it #>, <#= len #>).<#= method #><<#= param.CSharpType #>>(<#= param.Length #>, Alignment.<#= param.Alignment #>, '<#= param.PaddingChar #>', "<#= param.Format #>", <# if (param.IgnoreDecimalPoint) { #>true<# } else { #>false<# } #>);
+<#
+		it = it + len;
+	}
+}
+#>		}
+		
+		[OnDeserialized]
+		void OnDeserialized(StreamingContext ctxt)
+		{
+<# foreach (RequestHeaderParam param in template.RequestHeaderParams) { #>
+<# if (!string.IsNullOrEmpty(param.DefaultValue)) { #>
+			if (this.<# if (param.IsCustomType) { #>_<# } #><#= param.Name #> == null)
+				this.<# if (param.IsCustomType) { #>_<# } #><#= param.Name #> = <#= param.DefaultValue #>;
+<# } #>
+<# } #>
+		}
+
+		public override string ToString()
+		{
+			StringBuilder sb = new StringBuilder();
+
+<# foreach (RequestHeaderParam param in template.RequestHeaderParams) { #>
+<# if (param.IsSerializable) { #>
+			sb.Append(this.<# if (param.IsCustomType) { #>_<# } #><#= param.Name #>.ToCustomString(<#= param.Length #>, Alignment.<#= param.Alignment #>, '<#= param.PaddingChar #>', "<#= param.Format #>", <# if (param.IgnoreDecimalPoint) { #>true<# } else { #>false<# } #>));
+<# } #>
+<# } #>
+
+			return sb.ToString();
+		}
+	}
+	[DataContract]
+	public class RequestBody<#= template.ActionName #>
+	{
+<#	totalLen = 0;
+	foreach (RequestBodyParam param in template.RequestBodyParams)
+	{
+		if (param.IsSerializable)
+		{
+			int len = param.Length;
+			if (param.IsCustomType)
+			{
+				len = customTypes.First(c => c.Name == param.CSharpType).Length * param.Length;
+			}
+			totalLen += len;
+		}
+	} #>
+		public const int BODY_LENGTH = <#= totalLen #>;
+
+<# foreach (RequestBodyParam param in template.RequestBodyParams) { #>
+		[DataMember]
+		public <#= param.CSharpType #><# if (param.IsCustomType && param.Length > 1) { #>[]<# } #> <# if (param.IsCustomType) { #>_<# } #><#= param.Name #> { get; set; }
+<# } #>
+
+		public RequestBody<#= template.ActionName #>(string str)
+		{
+<#
+it = 0;
+foreach (RequestBodyParam param in template.RequestBodyParams) {
+	if (param.IsSerializable) {
+		string method = "ToCSharpType";
+		int len = param.Length;
+		if (param.IsCustomType)
+		{
+			len = customTypes.First(c => c.Name == param.CSharpType).Length * param.Length;
+			method = param.Length > 1 ? "ToCustomTypeArray" : "ToCustomType";
+		}
+#>
+			this.<# if (param.IsCustomType) { #>_<# } #><#= param.Name #> = str.Substring(<#= it #>, <#= len #>).<#= method #><<#= param.CSharpType #>>(<#= param.Length #>, Alignment.<#= param.Alignment #>, '<#= param.PaddingChar #>', "<#= param.Format #>", <# if (param.IgnoreDecimalPoint) { #>true<# } else { #>false<# } #>);
+<#
+		it = it + len;
+	}
+}
+#>		}
+
+		[OnDeserialized]
+		void OnDeserialized(StreamingContext ctxt)
+		{
+<# foreach (RequestBodyParam param in template.RequestBodyParams) { #>
+<# if (!string.IsNullOrEmpty(param.DefaultValue)) { #>
+			if (this.<# if (param.IsCustomType) { #>_<# } #><#= param.Name #> == null)
+				this.<# if (param.IsCustomType) { #>_<# } #><#= param.Name #> = <#= param.DefaultValue #>;
+<# } #>
+<# } #>
+		}
+
+		public override string ToString()
+		{
+			StringBuilder sb = new StringBuilder();
+
+<# foreach (RequestBodyParam param in template.RequestBodyParams) { #>
+<# if (param.IsSerializable) { #>
+			sb.Append(this.<# if (param.IsCustomType) { #>_<# } #><#= param.Name #>.ToCustomString(<#= param.Length #>, Alignment.<#= param.Alignment #>, '<#= param.PaddingChar #>', "<#= param.Format #>", <# if (param.IgnoreDecimalPoint) { #>true<# } else { #>false<# } #>));
+<# } #>
+<# } #>
+
+			return sb.ToString();
+		}
+	}
+	[DataContract]
+	public class ResponseBag<#= template.ActionName #> : IResponseBag
+	{
+		[DataMember]
+		public string RequestText { get; set; }
+		[DataMember]
+		public string ResponseText { get; set; }
+		[DataMember]
+		public ResponseHeader<#= template.ActionName #> RSHeader { get; set; }
+		[DataMember]
+		public List<ResponseBody<#= template.ActionName #>> RSBody { get; set; }
+		[DataMember]
+		public int ResultCode { get; set; }
+		[DataMember]
+		public string ResultDesc { get; set; }
+
+		public ResponseBag<#= template.ActionName #>()
+		{ }
+
+		public ResponseBag<#= template.ActionName #>(string response, string request)
+		{
+			this.ResponseText = response;
+			this.RequestText = request;
+
+			if (ResponseHeader<#= template.ActionName #>.HEADER_LENGTH > 0)
+			{
+				foreach (string headerString in this.ResponseText.SplitBy(ResponseHeader<#= template.ActionName #>.HEADER_LENGTH))
+				{
+					this.RSHeader = new ResponseHeader<#= template.ActionName #>(headerString);
+					break;
+				}
+			}
+
+			if (ResponseBody<#= template.ActionName #>.BODY_LENGTH > 0)
+			{
+				if (this.ResponseText.Length > ResponseHeader<#= template.ActionName #>.HEADER_LENGTH)
+				{
+					this.RSBody = new List<ResponseBody<#= template.ActionName #>>();
+					foreach (string bodyString in this.ResponseText.Substring(ResponseHeader<#= template.ActionName #>.HEADER_LENGTH).SplitBy(ResponseBody<#= template.ActionName #>.BODY_LENGTH))
+					{
+						this.RSBody.Add(new ResponseBody<#= template.ActionName #>(bodyString));
+					}
+				}
+			}
+		}
+	}
+	[DataContract]
+	public class ResponseHeader<#= template.ActionName #>
+	{
+<#	totalLen = 0;
+	foreach (ResponseHeaderParam param in template.ResponseHeaderParams)
+	{
+		if (param.IsSerializable)
+		{
+			int len = param.Length;
+			if (param.IsCustomType)
+			{
+				len = customTypes.First(c => c.Name == param.CSharpType).Length * param.Length;
+			}
+			totalLen += len;
+		}
+	} #>
+		public const int HEADER_LENGTH = <#= totalLen #>;
+
+<# foreach (ResponseHeaderParam param in template.ResponseHeaderParams) { #>
+		[DataMember]
+		public <#= param.CSharpType #><# if (param.IsCustomType && param.Length > 1) { #>[]<# } #> <# if (param.IsCustomType) { #>_<# } #><#= param.Name #> { get; set; }
+<# } #>
+
+		public ResponseHeader<#= template.ActionName #>(string str)
+		{
+<#
+it = 0;
+foreach (ResponseHeaderParam param in template.ResponseHeaderParams) {
+	if (param.IsSerializable) {
+		string method = "ToCSharpType";
+		int len = param.Length;
+		if (param.IsCustomType)
+		{
+			len = customTypes.First(c => c.Name == param.CSharpType).Length * param.Length;
+			method = param.Length > 1 ? "ToCustomTypeArray" : "ToCustomType";
+		}
+#>
+			this.<# if (param.IsCustomType) { #>_<# } #><#= param.Name #> = str.Substring(<#= it #>, <#= len #>).<#= method #><<#= param.CSharpType #>>(<#= param.Length #>, Alignment.<#= param.Alignment #>, '<#= param.PaddingChar #>', "<#= param.Format #>", <# if (param.IgnoreDecimalPoint) { #>true<# } else { #>false<# } #>);
+<#
+		it = it + len;
+	}
+}
+#>		}
+	}
+	[DataContract]
+	public class ResponseBody<#= template.ActionName #>
+	{
+<#	totalLen = 0;
+	foreach (ResponseBodyParam param in template.ResponseBodyParams)
+	{
+		if (param.IsSerializable)
+		{
+			int len = param.Length;
+			if (param.IsCustomType)
+			{
+				len = customTypes.First(c => c.Name == param.CSharpType).Length * param.Length;
+			}
+			totalLen += len;
+		}
+	} #>
+		public const int BODY_LENGTH = <#= totalLen #>;
+
+<# foreach (ResponseBodyParam param in template.ResponseBodyParams) { #>
+		[DataMember]
+		public <#= param.CSharpType #><# if (param.IsCustomType && param.Length > 1) { #>[]<# } #> <# if (param.IsCustomType) { #>_<# } #><#= param.Name #> { get; set; }
+<# } #>
+
+		public ResponseBody<#= template.ActionName #>(string str)
+		{
+<#
+it = 0;
+foreach (ResponseBodyParam param in template.ResponseBodyParams) {
+	if (param.IsSerializable) {
+		string method = "ToCSharpType";
+		int len = param.Length;
+		if (param.IsCustomType)
+		{
+			len = customTypes.First(c => c.Name == param.CSharpType).Length * param.Length;
+			method = param.Length > 1 ? "ToCustomTypeArray" : "ToCustomType";
+		}
+#>
+			this.<# if (param.IsCustomType) { #>_<# } #><#= param.Name #> = str.Substring(<#= it #>, <#= len #>).<#= method #><<#= param.CSharpType #>>(<#= param.Length #>, Alignment.<#= param.Alignment #>, '<#= param.PaddingChar #>', "<#= param.Format #>", <# if (param.IgnoreDecimalPoint) { #>true<# } else { #>false<# } #>);
+<#
+		it = it + len;
+	}
+}
+#>		}
+	}
+	public partial class StringBasedCommunicationFacilitatorService : IStringBasedCommunicationFacilitatorService
+	{
+		public ResponseBag<#= template.ActionName #> <#= template.ActionName #>(RequestBag<#= template.ActionName #> requestBag)
+		{
+			var responseBag = new ResponseBag<#= template.ActionName #>();
+			var errcode = 0;
+			var message = string.Empty;
+			var stcktrc = string.Empty;
+			var chrono = new Stopwatch();
+			try
+			{
+				chrono.Start();
+				responseBag = this.<#= template.ActionName #>Unsafe(requestBag, chrono);
+			}
+			catch (FacilitatorException mex)
+			{
+				responseBag.ResultCode = mex.ResultCode;
+				responseBag.ResultDesc = mex.ResultDesc;
+				errcode = mex.ResultCode;
+				message = mex.ResultDesc + " " + mex.Message;
+				stcktrc = mex.StackTrace;
+			}
+			catch (Exception ex)
+			{
+				FacilitatorException mex = new FacilitatorException(500);
+				responseBag.ResultCode = mex.ResultCode;
+				responseBag.ResultDesc = mex.ResultDesc;
+				errcode = mex.ResultCode;
+				message = ex.Message;
+				stcktrc = ex.StackTrace;
+			}
+			finally
+			{
+				if (chrono.IsRunning) chrono.Stop();
+				if (errcode != 0)
+				{
+					// Log the exception here
+				}
+				else
+				{
+					// Log the success here, with the duration (use chrono.ElapsedMilliseconds)
+					FacilitatorException mex = new FacilitatorException(0);
+					responseBag.ResultCode = mex.ResultCode;
+					responseBag.ResultDesc = mex.ResultDesc;
+				}
+			}
+			return responseBag;
+		}
+		private ResponseBag<#= template.ActionName #> <#= template.ActionName #>Unsafe(RequestBag<#= template.ActionName #> requestBag, Stopwatch chrono)
+		{
+			// Authentication
+			// Authorization
+
+			var requestString = requestBag.ToString();
+			var responseString = StringBasedCommunicator.SendAndReceive(requestString);
+
+			var responseBag = new ResponseBag<#= template.ActionName #>(responseString, requestString);
+			responseBag.RequestText = requestBag.ToString();
+
+			return responseBag;
+		}
+	}
+	#endregion
+
+<# } #>
+	#region Errors (if any)
+<# foreach (var template in customTypes) { #>
+<# foreach (CustomTypeField param in template.CustomTypeFields) { #>
+<# if (param.Errors.Length > 0) { #> <# Error("CustomType Name: " + template.Name + " Errors: " + param.Errors.ToString()); #> <# } #>
+<# } #>
+<# } #>
+<# foreach (var template in templates) { #>
+<# if (template.Errors.Length > 0) { #> <# Error("Template Name: " + template.ActionName + " Errors: " + template.Errors.ToString()); #> <# } #>
+<# foreach (RequestHeaderParam param in template.RequestHeaderParams) { #>
+<# if (param.Errors.Length > 0) { #> <# Error("Template Name: " + template.ActionName + " Errors: " + param.Errors.ToString()); #> <# } #>
+<# } #>
+<# foreach (RequestBodyParam param in template.RequestBodyParams) { #>
+<# if (param.Errors.Length > 0) { #> <# Error("Template Name: " + template.ActionName + " Errors: " + param.Errors.ToString()); #> <# } #>
+<# } #>
+<# foreach (ResponseHeaderParam param in template.ResponseHeaderParams) { #>
+<# if (param.Errors.Length > 0) { #> <# Error("Template Name: " + template.ActionName + " Errors: " + param.Errors.ToString()); #> <# } #>
+<# } #>
+<# foreach (ResponseBodyParam param in template.ResponseBodyParams) { #>
+<# if (param.Errors.Length > 0) { #> <# Error("Template Name: " + template.ActionName + " Errors: " + param.Errors.ToString()); #> <# } #>
+<# } #>
+<# } #>
+	#endregion
+}

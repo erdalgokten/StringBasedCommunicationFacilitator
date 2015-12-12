@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<messageTemplates>
+  <messageTemplate actionName="GetCustomerOrders" actionDesc="Gets customer orders from the backing system which only lets string based communication">
+    <requestHeaderParams>
+      <field name="QueryTime" csharpType="DateTime?" format="yyyyMMddhhmmss" defaultValue='DateTime.Now' />
+    </requestHeaderParams>
+    <requestBodyParams>
+      <field name="CustomerId" csharpType="int" format="000000000" />
+      <field name="OnlyPendingOrders" csharpType="bool?" format="Y;N" />
+    </requestBodyParams>
+    <responseHeaderParams>
+      <field name="TotalNumOfOrders" csharpType="int?" format="000000000" />
+    </responseHeaderParams>
+    <responseBodyParams>
+      <field name="Orders" csharpType="Order" length="1" />
+    </responseBodyParams>
+  </messageTemplate>
+</messageTemplates>

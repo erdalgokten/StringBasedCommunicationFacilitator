@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ReferenceGroup xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" ID="b0576bb3-7ef4-404f-b060-396befab304a" xmlns="urn:schemas-microsoft-com:xml-wcfservicemap">
+  <ClientOptions>
+    <GenerateAsynchronousMethods>false</GenerateAsynchronousMethods>
+    <GenerateTaskBasedAsynchronousMethod>true</GenerateTaskBasedAsynchronousMethod>
+    <EnableDataBinding>true</EnableDataBinding>
+    <ExcludedTypes />
+    <ImportXmlTypes>false</ImportXmlTypes>
+    <GenerateInternalTypes>false</GenerateInternalTypes>
+    <GenerateMessageContracts>false</GenerateMessageContracts>
+    <NamespaceMappings />
+    <CollectionMappings />
+    <GenerateSerializableTypes>true</GenerateSerializableTypes>
+    <Serializer>Auto</Serializer>
+    <UseSerializerForFaults>true</UseSerializerForFaults>
+    <ReferenceAllAssemblies>true</ReferenceAllAssemblies>
+    <ReferencedAssemblies />
+    <ReferencedDataContractTypes />
+    <ServiceContractMappings />
+  </ClientOptions>
+  <MetadataSources>
+    <MetadataSource Address="http://localhost:45296/StringBasedCommunicationFacilitator.svc" Protocol="http" SourceId="1" />
+  </MetadataSources>
+  <Metadata>
+    <MetadataFile FileName="StringBasedCommunicationFacilitator.disco" MetadataType="Disco" ID="a1eb32b1-8ff6-4251-a19f-8eea70843104" SourceId="1" SourceUrl="http://localhost:45296/StringBasedCommunicationFacilitator.svc?disco" />
+    <MetadataFile FileName="StringBasedCommunicationFacilitator.xsd" MetadataType="Schema" ID="5d3bb5ca-6c47-4484-940f-bb9446181b35" SourceId="1" SourceUrl="http://localhost:45296/StringBasedCommunicationFacilitator.svc?xsd=xsd0" />
+    <MetadataFile FileName="StringBasedCommunicationFacilitator1.xsd" MetadataType="Schema" ID="6422d0e9-b474-47c3-aa97-9b994ffc5d8a" SourceId="1" SourceUrl="http://localhost:45296/StringBasedCommunicationFacilitator.svc?xsd=xsd1" />
+    <MetadataFile FileName="StringBasedCommunicationFacilitator2.xsd" MetadataType="Schema" ID="2adc0425-4937-419b-912a-41864b2a48d3" SourceId="1" SourceUrl="http://localhost:45296/StringBasedCommunicationFacilitator.svc?xsd=xsd2" />
+    <MetadataFile FileName="StringBasedCommunicationFacilitatorService.wsdl" MetadataType="Wsdl" ID="a84076c4-ec31-4502-a258-6497205cb849" SourceId="1" SourceUrl="http://localhost:45296/StringBasedCommunicationFacilitator.svc?wsdl" />
+  </Metadata>
+  <Extensions>
+    <ExtensionFile FileName="configuration91.svcinfo" Name="configuration91.svcinfo" />
+    <ExtensionFile FileName="configuration.svcinfo" Name="configuration.svcinfo" />
+  </Extensions>
+</ReferenceGroup>

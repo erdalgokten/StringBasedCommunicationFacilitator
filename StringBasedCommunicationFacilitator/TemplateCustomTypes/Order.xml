@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<customTypes>
+  <customType name="Order">
+    <fields>
+      <field name="Name" csharpType="string" length="10" />
+      <field name="Desc" csharpType="string" length="20" />
+      <field name="Price" csharpType="decimal?" format="0000.00;-000.00" />
+      <field name="Quantity" csharpType="int" format="00000" />
+      <field name="Amount" csharpType="decimal?" format="00000.00;-0000.00" />
+    </fields>
+  </customType>
+</customTypes>
